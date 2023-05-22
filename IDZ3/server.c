@@ -3,8 +3,8 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <unistd.h>
 
-#define PORT 8080
 #define NUM_ROOMS 25
 #define MAX_CLIENTS 50
 
@@ -41,10 +41,17 @@ void reserve_room(shared_data_t *shared_data, int room_type, int client_sockfd) 
         snprintf(response, sizeof(response), "No available rooms of type %d", room_type);
         printf("Client requested Room of type %d, but no available rooms\n", room_type);
     }
-    write(client_sockfd, response, strlen(response) + 1);
+    send(client_sockfd, response, strlen(response) + 1, 0);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("pls enter port\n");
+        exit(1);
+    }
+
+    int port = atoi(argv[1]);
+
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
     int opt = 1;
@@ -79,7 +86,7 @@ int main() {
     }
 
     // Set socket options
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
         perror("setsockopt failed");
         exit(EXIT_FAILURE);
     }
@@ -87,7 +94,7 @@ int main() {
     // Set address parameters
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
+    address.sin_port = htons(port);
 
     // Bind socket to address
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
@@ -105,11 +112,19 @@ int main() {
 
     // Accept client connections
     while ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen))) {
+        printf("Avaible: type 1: %d, type 2: %d, type 3: %d\n", shared_data.num_rooms_1, shared_data.num_rooms_2, shared_data.num_rooms_3);
+        
+        if (shared_data.num_rooms_3 ==0 && shared_data.num_rooms_2 == 0 && shared_data.num_rooms_1 == 0) {
+            printf("No avaible rooms. Bye\n");
+            close(new_socket);
+            exit(0);
+        }
+        
         printf("New client connected\n");
 
         // Read client request
-        valread = read(new_socket, buffer, 1024);
-        if (valread == 0) {
+        valread = recv(new_socket, buffer, 1024, 0);
+        if (valread <= 0) {
             printf("Client disconnected\n");
             close(new_socket);
             continue;
@@ -130,9 +145,15 @@ int main() {
 
         if (room_type == 0) {
             printf("Client cannot afford any available room or no rooms available\n");
-            char response[] = "Client left the hotel";
-            write(new_socket, response, strlen(response) + 1);
+            char response[] = "No rooms";
+            send(new_socket, response, strlen(response) + 1, 0);
         } else {
+            char response[5];
+            snprintf(response, sizeof(response), "%d", room_type);
+            send(new_socket, response, strlen(response) + 1, 0);
+            char result[5];
+            valread = recv(new_socket, result, 5, 0);
+            room_type = atoi(result);
             reserve_room(&shared_data, room_type, new_socket);
         }
 

@@ -4,15 +4,22 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <time.h>
+#include <unistd.h>
 
 #define SERVER_IP "127.0.0.1"
-#define PORT 8080
 
 int generate_random_number(int min, int max) {
     return (rand() % (max - min + 1)) + min;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("pls enter port\n");
+        exit(1);
+    }
+
+    int port = atoi(argv[1]);
+
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
     char buffer[1024] = {0};
@@ -24,7 +31,7 @@ int main() {
     }
 
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
+    serv_addr.sin_port = htons(port);
 
     // Convert IPv4 and IPv6 addresses from text to binary form
     if (inet_pton(AF_INET, SERVER_IP, &serv_addr.sin_addr) <= 0) {
@@ -41,7 +48,7 @@ int main() {
     // Generate random budget and room type
     srand(time(0));
     int budget = generate_random_number(0, 10000);
-    int room_type = generate_random_number(1, 3);
+    int room_type;
 
     // Send budget to server
     printf("Budget: %d\n", budget);
@@ -52,19 +59,20 @@ int main() {
     valread = read(sock, buffer, 1024);
     printf("%s\n", buffer);
 
-    if (strcmp(buffer, "Room available") == 0) {
+    if (strcmp(buffer, "1") == 0 || strcmp(buffer, "2") == 0 || strcmp(buffer, "3") == 0) {
         // Send room type to server
-        printf("Room type: %d\n", room_type);
-        snprintf(buffer, sizeof(buffer), "%d", room_type);
+        printf("Avaible room type: %d\n", atoi(buffer));
+        room_type = rand() % atoi(buffer) + 1;
+        printf("Chosen type: %d\n", room_type);
+        char answer[5];
+        snprintf(answer, sizeof(buffer), "%d", room_type);
         send(sock, buffer, strlen(buffer), 0);
 
         // Read server response
-        valread = read(sock, buffer, 1024);
+        valread = recv(sock, buffer, 1024, 0);
         printf("%s\n", buffer);
-    } else if (strcmp(buffer, "Insufficient funds") == 0) {
+    } else if (strcmp(buffer, "No rooms") == 0) {
         printf("Client left the hotel due to insufficient funds.\n");
-    } else if (strcmp(buffer, "No available rooms") == 0) {
-        printf("No available rooms in the hotel. Client left.\n");
     }
 
     // Close socket
