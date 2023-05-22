@@ -112,9 +112,9 @@ int main(int argc, char *argv[]) {
 
     // Accept client connections
     while ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen))) {
-        printf("Avaible: type 1: %d, type 2: %d, type 3: %d\n", shared_data.num_rooms_1, shared_data.num_rooms_2, shared_data.num_rooms_3);
+        printf("Avaible rooms count: %d\n", shared_data.num_free_rooms);
         
-        if (shared_data.num_rooms_3 ==0 && shared_data.num_rooms_2 == 0 && shared_data.num_rooms_1 == 0) {
+        if (shared_data.num_free_rooms == 0) {
             printf("No avaible rooms. Bye\n");
             close(new_socket);
             exit(0);

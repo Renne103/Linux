@@ -6,19 +6,18 @@
 #include <time.h>
 #include <unistd.h>
 
-#define SERVER_IP "127.0.0.1"
-
 int generate_random_number(int min, int max) {
     return (rand() % (max - min + 1)) + min;
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        printf("pls enter port\n");
+    if (argc < 3) {
+        printf("pls enter port and ip\n");
         exit(1);
     }
 
     int port = atoi(argv[1]);
+    char *ip = argv[2];
 
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
@@ -34,7 +33,7 @@ int main(int argc, char *argv[]) {
     serv_addr.sin_port = htons(port);
 
     // Convert IPv4 and IPv6 addresses from text to binary form
-    if (inet_pton(AF_INET, SERVER_IP, &serv_addr.sin_addr) <= 0) {
+    if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0) {
         printf("\nInvalid address/ Address not supported\n");
         return -1;
     }
